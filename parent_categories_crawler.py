@@ -29,20 +29,23 @@ def parser_parent_categories(json, id):
     return data
 
 def parent_categories_crawler():
+    parent_categories_list_id = []
     parent_categories_result = {
         'parent_categories': []
     }
+
     print('Processing: Tiến hành lấy thông tin danh mục cha...')
     if response.status_code == 200:
         parent_categories_list = response.json().get('menu_block').get('items')
         for category in parent_categories_list:
             id = re.findall(r'\d+', category.get('link'))[-1]
+            parent_categories_list_id.append(id)
             parent_categories_result['parent_categories'].append(parser_parent_categories(category, id))
         
         print('- Số lượng danh mục cha: ', len(parent_categories_result['parent_categories']))
         print('Success: Crawl thông tin danh mục cha thành công')
 
-        return parent_categories_result
+        return [parent_categories_result, parent_categories_list_id]
     else:
         print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
 
