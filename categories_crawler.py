@@ -75,6 +75,7 @@ def categories_crawler(parent_categories_result, categories_list_id):
                         categories_list_id.remove(parent_category_result.get('id'))
                         remove_once_1 = True
                     categories_list_id.append(result.get('id'))
+            remove_once_1 = False
         else:
             print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
 
@@ -98,6 +99,7 @@ def categories_crawler(parent_categories_result, categories_list_id):
                             categories_list_id.remove(category_result.get('id'))
                             remove_once_2 = True
                         categories_list_id.append(result.get('id'))
+                remove_once_2 = False
             else:
                 print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
 
@@ -121,6 +123,7 @@ def categories_crawler(parent_categories_result, categories_list_id):
                                 categories_list_id.remove(sub_category_result.get('id'))
                                 remove_once_3 = True
                             categories_list_id.append(result.get('id'))
+                    remove_once_3 = False
                 else:
                     print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
 
@@ -144,6 +147,7 @@ def categories_crawler(parent_categories_result, categories_list_id):
                                     categories_list_id.remove(sub_sub_category_result.get('id'))
                                     remove_once_4 = True
                                 categories_list_id.append(result.get('id'))
+                        remove_once_4 = False
                     else:
                         print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
 
@@ -155,7 +159,7 @@ def categories_crawler(parent_categories_result, categories_list_id):
     print('- Số lượng danh mục phụ 3: ', count_sub_sub_sub_categories_result)
     print('- Tổng categories lấy được: ', len(categories_list_id))
 
-    with open('categories_result.json', 'w', encoding='utf-8') as file:
+    with open('categories_result_2.json', 'w', encoding='utf-8') as file:
         json.dump(parent_categories_result, file)
 
     print("Đã lưu file JSON thành công!")
@@ -168,7 +172,7 @@ def crawler():
 
     categories_result = categories_crawler(parent_categories_result, parent_categories_list_id)
     df = pd.DataFrame(categories_result[1], columns=['Category ID'])
-    df.to_csv('categories_id_1.csv')
+    df.to_csv('categories_id_2.csv')
     print(f"File created successfully.")
 
     print('Success: Crawl thông tin danh mục con thành công')
