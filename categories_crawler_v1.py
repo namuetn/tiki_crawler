@@ -192,7 +192,7 @@ def crawler():
     connect_database(categories_result[0])
 
     df = pd.DataFrame(categories_result[1], columns=['Category ID'])
-    df.to_csv('categories_id.csv')
+    df.to_csv('categories_id_v1.csv')
     print(f"File created successfully.")
     return categories_result
 
