@@ -35,14 +35,60 @@ def connect_database(data):
 
     print("Inserted document ID:", result.inserted_id)
 
-def parser_categories(json):
+def parser_product(json):
     data = {}
 
-    data['id'] = json.get('query_value')
-    data['text'] = json.get('display_value')
-    data['link'] = json.get('url_path')
+    data['id'] = json.get('id')
+    data['name'] = json.get('name')
+    data['short_description'] = json.get('short_description')
+    data['url'] = json.get('url_path')
+    data['rating'] = json.get('rating_average')
+    data['price'] = json.get('price')
+    data['category_id'] = json.get('primary_category_path')
+    data['quantity_sold'] = json.get('url_path')['value']
 
     return data
 
 def products_crawler():
-    pass
+    categories = pd.read_csv('./categories_id_v1_1.csv')
+    total_page = pd.read_csv('./total_page_v1_1.csv')
+    zipper = zip(categories['Category ID'], total_page['Total Page'])
+
+    product_result = []
+    
+    total_all_product = []  # Danh sách tổng số sản phẩm
+    total_product_count = 0  # Biến đếm tổng số sản phẩm
+    for category, pages in tqdm(zipper, total=len(zipper), desc='Sản phẩm'):
+        total_product_of_page = []  # Danh sách số sản phẩm trên mỗi trang
+        total_page_count = 0  # Biến đếm số trang
+
+        category_product_count = 0
+        for page in range(1, pages + 1):
+            params['category'] = category
+            params['page'] = page
+
+            response = requests.get(url=url, headers=headers, params=params)
+            if response.status_code == 200:
+                product = response.json().get('data')
+                product_result.append(parser_product(product))
+                
+                # Đếm số sản phẩm trên mỗi trang
+                total_product_of_page.append(len(product))
+                total_page_count += 1
+                
+                # Cộng dồn số sản phẩm của category hiện tại
+                category_product_count += len(product)
+            else:
+                print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
+
+                return None
+        total_all_product.append(total_product_of_page)  # Thêm danh sách số sản phẩm của mỗi trang vào danh sách tổng số sản phẩm
+        total_product_count += sum(total_product_of_page)  # Cộng dồn số sản phẩm trên mỗi trang vào biến đếm tổng số sản phẩm
+        
+        # In số sản phẩm của category hiện tại
+        print("Số sản phẩm của category", category, ":", category_product_count)
+    # In kết quả
+    print("Số sản phẩm trên mỗi trang:", total_all_product)
+    print("Tổng số sản phẩm:", total_product_count)
+products_crawler()
+

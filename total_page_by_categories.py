@@ -39,7 +39,7 @@ def abc():
 
 def total_page_crawler():
     total_page_list = []
-    categories_id = pd.read_csv('./categories_id_2.csv')
+    categories_id = pd.read_csv('./categories_id_v1_1.csv')
 
     print('Processing: Tiến hành lấy thông tin page cho tất cả danh mục...')
     for categories_id in tqdm(categories_id['Category ID'], total=len(categories_id['Category ID']), desc='Danh mục con 2'):
@@ -54,7 +54,7 @@ def total_page_crawler():
             return None
     print(total_page_list)
     df = pd.DataFrame(total_page_list, columns=['Total Page'])
-    df.to_csv('total_page_2.csv')
+    df.to_csv('total_page_v1_1.csv')
     print(f"File created successfully.")
 
-abc()
+total_page_crawler()
