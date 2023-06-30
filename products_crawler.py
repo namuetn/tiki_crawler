@@ -1,5 +1,7 @@
 import json
 import requests
+import time
+from requests.exceptions import ChunkedEncodingError
 import pandas as pd
 from tqdm import tqdm
 from pymongo import MongoClient
@@ -67,47 +69,47 @@ def products_crawler():
     zipper = zip(categories['Category ID'], total_page['Total Page'])
 
     product_result = []
-    
-    # total_all_product = []  # Danh sách tổng số sản phẩm
-    # total_product_count = 0  # Biến đếm tổng số sản phẩm
-    for category, pages in tqdm(zipper, total=len(categories['Category ID']), desc='Sản phẩm'):
-        # total_product_of_page = []  # Danh sách số sản phẩm trên mỗi trang
-        # total_page_count = 0  # Biến đếm số trang
 
-        # category_product_count = 0
-        for page in range(1, pages + 1):
-            params['category'] = category
-            params['page'] = page
+    try:
+        for category, pages in tqdm(zipper, total=len(categories['Category ID']), desc='Sản phẩm'):
+            for page in range(1, pages + 1):
+                params['category'] = category
+                params['page'] = page
+                try:
+                    response = requests.get(url=url, headers=headers, params=params)
+                    if response.status_code == 200:
+                        products = response.json().get('data')
+                        for product in products:
+                            product_result.append(parser_product(product))
+                    else:
+                        print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
+                        print('# Đợi 1 giây và thử lại yêu cầu')
+                        time.sleep(2)
+                        print(params)
+                        response = requests.get(url=url, headers=headers, params=params)
+                        if response.status_code == 200:
+                            print('trả kết quả sau khi load lại')
+                            products = response.json().get('data')
+                            for product in products:
+                                product_result.append(parser_product(product))
+                        else:
+                            print('lỗi khi chạy lại')
+                except ChunkedEncodingError:
+                    print('request lại')
+                    response = requests.get(url=url, headers=headers, params=params)
+                except requests.exceptions.RequestException as e:
+                    print('Lỗi kết nối:', str(e))
 
-            response = requests.get(url=url, headers=headers, params=params)
-            if response.status_code == 200:
-                products = response.json().get('data')
-                for product in products:
-                    product_result.append(parser_product(product))
+        print('Tiến hành tạo file csv')
+        create_file_csv(product_result)
+        print('Tiến hành lưu vào database')
+        connect_database(product_result)
 
-                # Đếm số sản phẩm trên mỗi trang
-                # total_product_of_page.append(len(product))
-                # total_page_count += 1
-                
-                # Cộng dồn số sản phẩm của category hiện tại
-                # category_product_count += len(product)
-            else:
-                print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
-
-                return None
-        # total_all_product.append(total_product_of_page)  # Thêm danh sách số sản phẩm của mỗi trang vào danh sách tổng số sản phẩm
-        # total_product_count += sum(total_product_of_page)  # Cộng dồn số sản phẩm trên mỗi trang vào biến đếm tổng số sản phẩm
+        print('Crawl thông tin sản phẩm thành công')
+    except Exception as e:
+        print('Tiến hành tạo file csv')
+        create_file_csv(product_result)
+        print(f'có lỗi xảy ra {e}')
         
-        # In số sản phẩm của category hiện tại
-        # print("Số sản phẩm của category", category, ":", category_product_count)
-    # In kết quả
-    # print("Số sản phẩm trên mỗi trang:", total_all_product)
-    # print("Tổng số sản phẩm:", total_product_count)
-    print('Tiến hành tạo file csv')
-    create_file_csv(product_result)
-    print('Tiến hành lưu vào database')
-    connect_database(product_result)
-
-    print('Crawl thông tin sản phẩm thành công')
 products_crawler()
 
