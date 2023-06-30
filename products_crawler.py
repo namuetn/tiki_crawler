@@ -30,10 +30,22 @@ params = {
 def connect_database(data):
     client = MongoClient("mongodb://localhost:27017")
     db = client["tiki_database"]
-    collection = db["categories"]
-    result = collection.insert_one(data)
+    collection = db["products"]
+    result = collection.insert_many(data)
 
     print("Inserted document ID:", result.inserted_id)
+    client.close()
+
+def create_file_csv(data):
+    df = pd.DataFrame(data)
+
+    # Tên tệp tin CSV
+    csv_file = "product_v1.csv"
+
+    # Lưu DataFrame thành tệp tin CSV
+    df.to_csv(csv_file, index=False)
+
+    print("Tạo tệp tin CSV thành công!")
 
 def parser_product(json):
     data = {}
@@ -45,7 +57,7 @@ def parser_product(json):
     data['rating'] = json.get('rating_average')
     data['price'] = json.get('price')
     data['category_id'] = json.get('primary_category_path')
-    data['quantity_sold'] = json.get('url_path')['value']
+    # data['quantity_sold'] = json.get('quantity_sold')
 
     return data
 
@@ -56,39 +68,46 @@ def products_crawler():
 
     product_result = []
     
-    total_all_product = []  # Danh sách tổng số sản phẩm
-    total_product_count = 0  # Biến đếm tổng số sản phẩm
-    for category, pages in tqdm(zipper, total=len(zipper), desc='Sản phẩm'):
-        total_product_of_page = []  # Danh sách số sản phẩm trên mỗi trang
-        total_page_count = 0  # Biến đếm số trang
+    # total_all_product = []  # Danh sách tổng số sản phẩm
+    # total_product_count = 0  # Biến đếm tổng số sản phẩm
+    for category, pages in tqdm(zipper, total=len(categories['Category ID']), desc='Sản phẩm'):
+        # total_product_of_page = []  # Danh sách số sản phẩm trên mỗi trang
+        # total_page_count = 0  # Biến đếm số trang
 
-        category_product_count = 0
+        # category_product_count = 0
         for page in range(1, pages + 1):
             params['category'] = category
             params['page'] = page
 
             response = requests.get(url=url, headers=headers, params=params)
             if response.status_code == 200:
-                product = response.json().get('data')
-                product_result.append(parser_product(product))
-                
+                products = response.json().get('data')
+                for product in products:
+                    product_result.append(parser_product(product))
+
                 # Đếm số sản phẩm trên mỗi trang
-                total_product_of_page.append(len(product))
-                total_page_count += 1
+                # total_product_of_page.append(len(product))
+                # total_page_count += 1
                 
                 # Cộng dồn số sản phẩm của category hiện tại
-                category_product_count += len(product)
+                # category_product_count += len(product)
             else:
                 print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
 
                 return None
-        total_all_product.append(total_product_of_page)  # Thêm danh sách số sản phẩm của mỗi trang vào danh sách tổng số sản phẩm
-        total_product_count += sum(total_product_of_page)  # Cộng dồn số sản phẩm trên mỗi trang vào biến đếm tổng số sản phẩm
+        # total_all_product.append(total_product_of_page)  # Thêm danh sách số sản phẩm của mỗi trang vào danh sách tổng số sản phẩm
+        # total_product_count += sum(total_product_of_page)  # Cộng dồn số sản phẩm trên mỗi trang vào biến đếm tổng số sản phẩm
         
         # In số sản phẩm của category hiện tại
-        print("Số sản phẩm của category", category, ":", category_product_count)
+        # print("Số sản phẩm của category", category, ":", category_product_count)
     # In kết quả
-    print("Số sản phẩm trên mỗi trang:", total_all_product)
-    print("Tổng số sản phẩm:", total_product_count)
+    # print("Số sản phẩm trên mỗi trang:", total_all_product)
+    # print("Tổng số sản phẩm:", total_product_count)
+    print('Tiến hành tạo file csv')
+    create_file_csv(product_result)
+    print('Tiến hành lưu vào database')
+    connect_database(product_result)
+
+    print('Crawl thông tin sản phẩm thành công')
 products_crawler()
 
