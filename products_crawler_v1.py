@@ -2,6 +2,7 @@ import json
 import requests
 import time
 from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import RequestException
 import pandas as pd
 from tqdm import tqdm
 from pymongo import MongoClient
@@ -42,14 +43,11 @@ def connect_database(data):
 
     client.close()
 
-def create_file_csv(data):
+def create_file_csv(data, file_path):
     df = pd.DataFrame(data)
 
-    # Tên tệp tin CSV
-    csv_file = "product_v1.csv"
-
     # Lưu DataFrame thành tệp tin CSV
-    df.to_csv(csv_file, index=False)
+    df.to_csv(file_path, index=False)
 
     print("Tạo tệp tin CSV thành công!")
 
@@ -79,41 +77,54 @@ def products_crawler():
             for page in range(1, pages + 1):
                 params['category'] = category
                 params['page'] = page
-                try:
-                    response = requests.get(url=url, headers=headers, params=params)
-                    if response.status_code == 200:
-                        products = response.json().get('data')
-                        for product in products:
-                            product_result.append(parser_product(product))
-                    else:
-                        print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
-                        print('# Đợi 1 giây và thử lại yêu cầu')
-                        time.sleep(2)
-                        print(params)
+                max_retries = 3
+                retries = 0
+                success = False
+                while retries < max_retries and not success:
+                    try:
                         response = requests.get(url=url, headers=headers, params=params)
                         if response.status_code == 200:
-                            print('trả kết quả sau khi load lại')
                             products = response.json().get('data')
                             for product in products:
                                 product_result.append(parser_product(product))
+                            success = True
                         else:
-                            print('lỗi khi chạy lại')
-                except ChunkedEncodingError:
-                    print('request lại')
-                    response = requests.get(url=url, headers=headers, params=params)
-                except requests.exceptions.RequestException as e:
-                    print('Lỗi kết nối:', str(e))
+                            print('Error: Yêu cầu GET không thành công. Mã trạng thái:', response.status_code)
+                            retries += 1
+                            print(f'+ Thử lại yêu cầu ({retries}/{max_retries})')
+                            time.sleep(4)
+                    except ChunkedEncodingError:
+                        print('Error: Lỗi mã hóa')
+                        retries += 1
+                        print(f'+ Thử lại yêu cầu ({retries}/{max_retries})')
+                        time.sleep(4)
+                    except RequestException as e:
+                        print('Error: Lỗi kết nối:', str(e))
+                        retries += 1
+                        print(f'+ Thử lại yêu cầu ({retries}/{max_retries})')
+                        time.sleep(4)
 
-        print('Tiến hành tạo file csv')
-        create_file_csv(product_result)
-        print('Tiến hành lưu vào database')
-        connect_database(product_result)
+        unique_products = []
+        id_set = set()
+
+        print('Tiến hành loại bỏ product trùng lặp...')
+        for product in product_result:
+            product_id = product['id']
+            if product_id not in id_set:
+                unique_products.append(product)
+                id_set.add(product_id)
+
+        print('Tiến hành tạo file csv...')
+        create_file_csv(unique_products, "product_v1_1.csv")
+        print('Tiến hành lưu vào database...')
+        connect_database(unique_products)
+        create_file_csv(id_set, "id_set_v1.csv")
 
         print('Crawl thông tin sản phẩm thành công')
     except Exception as e:
         print('Tiến hành tạo file csv')
-        create_file_csv(product_result)
-        print(f'có lỗi xảy ra {e}')
+        create_file_csv(product_result, "product_v1_1.csv")
+        print(f'Có lỗi xảy ra: {e}')
         
 products_crawler()
 
