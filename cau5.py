@@ -25,9 +25,9 @@ def import_to_mysql(data):
     cursor.execute("USE tiki_ingredients")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS products (
-            id INT PRIMARY KEY AUTO INCREMENT,
+            id INT PRIMARY KEY AUTO_INCREMENT,
             product_id INT,
-            ingredients VARCHAR(1000)
+            ingredients TEXT
         )
     """)
     
@@ -37,7 +37,7 @@ def import_to_mysql(data):
     cursor.execute('SET GLOBAL binlog_error_action=ABORT_SERVER')
     cursor.execute('SET GLOBAL max_allowed_packet=67108864')
 
-    sql = "INSERT INTO products (id, ingredients) VALUES (%s, %s)"
+    sql = "INSERT INTO products (product_id, ingredients) VALUES (%s, %s)"
     print('Bắt đàu import')
     values = [(item.get('id', ''), item.get('ingredients', '')) for item in tqdm(data)]
     print('Chuẩn bị lưu vào mysql')
@@ -61,8 +61,8 @@ def main():
         'specifications': 1,
     }
 
-    pattern = re.compile(r'thành phần', re.IGNORECASE)
-    data = get_collection().find({}, projection).limit(500)
+    # pattern = re.compile(r'thành phần', re.IGNORECASE)
+    data = get_collection().find({}, projection)
     # data = data[0:100]
     results = []
 
@@ -74,14 +74,14 @@ def main():
                 if attributes['code'] == 'ingredients':
                     results.append({'id': item['id'], 'ingredients': attributes['value']})
                     # print({'id': item['id'], 'ingredients': attributes['value']})
-        elif 'description' in item:
-            description = item['description']
-            soup = BeautifulSoup(description, 'html.parser')
-            # elements = soup.find('strong', text='Thành phần')
-            elements = soup.find_all(string=pattern)
-            if elements:
-                print(item.get('short_url'))
-                print(elements)
+        # elif 'description' in item:
+        #     description = item['description']
+        #     soup = BeautifulSoup(description, 'html.parser')
+        #     # elements = soup.find('strong', text='Thành phần')
+        #     elements = soup.find_all(string=pattern)
+        #     if elements:
+        #         print(item.get('short_url'))
+        #         print(elements)
             #     # Lấy tất cả văn bản bên dưới thẻ strong '2. Thành phần'
             #     text_below_strong = elements.find_next_siblings(text=True)
                 
@@ -97,7 +97,7 @@ def main():
             # for element in elements:
             #     text = element.get_text()
             #     results.append(text)
-    # import_to_mysql(results)
+    import_to_mysql(results)
 
 
 main()
